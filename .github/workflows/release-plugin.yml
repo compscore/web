@@ -22,7 +22,7 @@ jobs:
 
     - name: Compile Plugin
       run: |
-        go build -o check.so -buildmode=plugin main.go
+        GOARCH=amd64 GOOS=linux go build -o check.so -buildmode=plugin main.go
 
     - name: Create Release
       id: create_release
