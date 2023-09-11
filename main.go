@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type expectedOutputStruct struct {
@@ -75,7 +74,6 @@ func (e *expectedOutputStruct) Compare(response *http.Response) error {
 	}
 
 	body := string(bodyBytes)
-	fmt.Println(body)
 
 	if e.SubstringMatch != "" && !strings.Contains(body, e.SubstringMatch) {
 		return fmt.Errorf("substring match mismatch: expected \"%s\"", e.SubstringMatch)
@@ -172,11 +170,4 @@ func Run(ctx context.Context, target string, command string, expectedOutput stri
 
 		return true, ""
 	}
-}
-
-func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	fmt.Println(Run(ctx, "https://pastebin.com/raw/LpnAL5jF", "GET", "status_code=200;regex_match=\\d", "", ""))
 }
