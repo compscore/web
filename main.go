@@ -24,7 +24,7 @@ type expectedOutputStruct struct {
 	Match string `compscore:"match"`
 }
 
-func (e *expectedOutputStruct) Unmarshall(in string) error {
+func (e *expectedOutputStruct) Unmarshal(in string) error {
 	structLookup := make(map[string]string)
 	testSplit := strings.Split(in, ";")
 	for _, item := range testSplit {
@@ -147,7 +147,7 @@ func Run(ctx context.Context, target string, command string, expectedOutput stri
 		defer resp.Body.Close()
 
 		var output expectedOutputStruct
-		err = output.Unmarshall(expectedOutput)
+		err = output.Unmarshal(expectedOutput)
 		if err != nil {
 			errChan <- fmt.Errorf("encounted error while parsing expected output: %v", err.Error())
 			return
