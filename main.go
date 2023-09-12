@@ -26,8 +26,8 @@ type expectedOutputStruct struct {
 
 func (e *expectedOutputStruct) Unmarshal(in string) error {
 	structLookup := make(map[string]string)
-	testSplit := strings.Split(in, ";")
-	for _, item := range testSplit {
+	split := strings.Split(in, ";")
+	for _, item := range split {
 		itemSplit := strings.Split(item, "=")
 		if len(itemSplit) != 2 {
 			return fmt.Errorf("invalid parameter string: %s", item)
