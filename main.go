@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
@@ -24,39 +23,44 @@ type expectedOutputStruct struct {
 	Match string `compscore:"match"`
 }
 
-func (e *expectedOutputStruct) Unmarshal(in string) error {
-	structLookup := make(map[string]string)
-	split := strings.Split(in, ";")
-	for _, item := range split {
-		itemSplit := strings.Split(item, "=")
-		if len(itemSplit) != 2 {
-			return fmt.Errorf("invalid parameter string: %s", item)
-		}
-		structLookup[strings.TrimSpace(itemSplit[0])] = strings.TrimSpace(itemSplit[1])
-	}
-
-	statusCodeStr, ok := structLookup["status_code"]
+func (e *expectedOutputStruct) Unmarshal(options map[string]interface{}) error {
+	statusCodeInterface, ok := options["status_code"]
 	if ok {
-		statusCodeInt, err := strconv.Atoi(statusCodeStr)
-		if err != nil {
-			return fmt.Errorf("invalid status code: %s", statusCodeStr)
+		statusCode, ok := statusCodeInterface.(int)
+		if !ok {
+			return fmt.Errorf("status code must be a string")
 		}
 
-		e.StatusCode = statusCodeInt
+		e.StatusCode = statusCode
 	}
 
-	substringMatch, ok := structLookup["substring_match"]
+	substringMatchInterface, ok := options["substring_match"]
 	if ok {
+		substringMatch, ok := substringMatchInterface.(string)
+		if !ok {
+			return fmt.Errorf("substring match must be a string")
+		}
+
 		e.SubstringMatch = substringMatch
 	}
 
-	regexMatch, ok := structLookup["regex_match"]
+	regexMatchInterface, ok := options["regex_match"]
 	if ok {
+		regexMatch, ok := regexMatchInterface.(string)
+		if !ok {
+			return fmt.Errorf("regex match must be a string")
+		}
+
 		e.RegexMatch = regexMatch
 	}
 
-	match, ok := structLookup["match"]
+	matchInterface, ok := options["match"]
 	if ok {
+		match, ok := matchInterface.(string)
+		if !ok {
+			return fmt.Errorf("match must be a string")
+		}
+
 		e.Match = match
 	}
 
@@ -97,7 +101,7 @@ func (e *expectedOutputStruct) Compare(response *http.Response) error {
 	return nil
 }
 
-func Run(ctx context.Context, target string, command string, expectedOutput string, username string, password string) (bool, string) {
+func Run(ctx context.Context, target string, command string, expectedOutput string, username string, password string, options map[string]interface{}) (bool, string) {
 	var requestType string
 
 	switch strings.ToUpper(command) {
@@ -147,7 +151,7 @@ func Run(ctx context.Context, target string, command string, expectedOutput stri
 		defer resp.Body.Close()
 
 		var output expectedOutputStruct
-		err = output.Unmarshal(expectedOutput)
+		err = output.Unmarshal(options)
 		if err != nil {
 			errChan <- fmt.Errorf("encounted error while parsing expected output: %v", err.Error())
 			return
