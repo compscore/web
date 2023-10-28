@@ -9,21 +9,21 @@ import (
 	"strings"
 )
 
-type expectedOutputStruct struct {
+type optionsStruct struct {
 	// check for status code match
 	StatusCode int `compscore:"status_code"`
 
 	// check for substring match in body
-	SubstringMatch string `compscore:"substring_match"`
+	SubstringMatch bool `compscore:"substring_match"`
 
 	// check for regex match in body
-	RegexMatch string `compscore:"regex_match"`
+	RegexMatch bool `compscore:"regex_match"`
 
 	// check for exact match in body
-	Match string `compscore:"match"`
+	Match bool `compscore:"match"`
 }
 
-func (e *expectedOutputStruct) Unmarshal(options map[string]interface{}) error {
+func (o *optionsStruct) Unmarshal(options map[string]interface{}) error {
 	statusCodeInterface, ok := options["status_code"]
 	if ok {
 		statusCode, ok := statusCodeInterface.(int)
@@ -31,45 +31,30 @@ func (e *expectedOutputStruct) Unmarshal(options map[string]interface{}) error {
 			return fmt.Errorf("status code must be a string")
 		}
 
-		e.StatusCode = statusCode
+		o.StatusCode = statusCode
 	}
 
-	substringMatchInterface, ok := options["substring_match"]
+	_, ok = options["substring_match"]
 	if ok {
-		substringMatch, ok := substringMatchInterface.(string)
-		if !ok {
-			return fmt.Errorf("substring match must be a string")
-		}
-
-		e.SubstringMatch = substringMatch
+		o.SubstringMatch = true
 	}
 
-	regexMatchInterface, ok := options["regex_match"]
+	_, ok = options["regex_match"]
 	if ok {
-		regexMatch, ok := regexMatchInterface.(string)
-		if !ok {
-			return fmt.Errorf("regex match must be a string")
-		}
-
-		e.RegexMatch = regexMatch
+		o.RegexMatch = true
 	}
 
-	matchInterface, ok := options["match"]
+	_, ok = options["match"]
 	if ok {
-		match, ok := matchInterface.(string)
-		if !ok {
-			return fmt.Errorf("match must be a string")
-		}
-
-		e.Match = match
+		o.Match = true
 	}
 
 	return nil
 }
 
-func (e *expectedOutputStruct) Compare(response *http.Response) error {
-	if e.StatusCode != 0 && e.StatusCode != response.StatusCode {
-		return fmt.Errorf("status code mismatch: expected \"%d\", got \"%d\"", e.StatusCode, response.StatusCode)
+func (o *optionsStruct) Compare(expectedOutput string, response *http.Response) error {
+	if o.StatusCode != 0 && o.StatusCode != response.StatusCode {
+		return fmt.Errorf("status code mismatch: expected \"%d\", got \"%d\"", o.StatusCode, response.StatusCode)
 	}
 
 	bodyBytes, err := io.ReadAll(response.Body)
@@ -79,22 +64,22 @@ func (e *expectedOutputStruct) Compare(response *http.Response) error {
 
 	body := string(bodyBytes)
 
-	if e.SubstringMatch != "" && !strings.Contains(body, e.SubstringMatch) {
-		return fmt.Errorf("substring match mismatch: expected \"%s\"", e.SubstringMatch)
+	if o.SubstringMatch && !strings.Contains(body, expectedOutput) {
+		return fmt.Errorf("substring match mismatch: expected \"%s\"", expectedOutput)
 	}
 
-	if e.Match != "" && e.Match != body {
-		return fmt.Errorf("match mismatch: expected \"%s\", got \"%s\"", e.Match, body)
+	if o.Match && expectedOutput != body {
+		return fmt.Errorf("match mismatch: expected \"%s\", got \"%s\"", expectedOutput, body)
 	}
 
-	if e.RegexMatch != "" {
-		pattern, err := regexp.Compile(e.RegexMatch)
+	if o.RegexMatch {
+		pattern, err := regexp.Compile(expectedOutput)
 		if err != nil {
-			return fmt.Errorf("invalid regex pattern: \"%s\"", e.RegexMatch)
+			return fmt.Errorf("invalid regex pattern: \"%s\"", expectedOutput)
 		}
 
 		if !pattern.MatchString(body) {
-			return fmt.Errorf("regex match mismatch: expected \"%s\"", e.RegexMatch)
+			return fmt.Errorf("regex match mismatch: expected \"%s\"", expectedOutput)
 		}
 	}
 
@@ -150,14 +135,14 @@ func Run(ctx context.Context, target string, command string, expectedOutput stri
 		}
 		defer resp.Body.Close()
 
-		var output expectedOutputStruct
-		err = output.Unmarshal(options)
+		var o optionsStruct
+		err = o.Unmarshal(options)
 		if err != nil {
 			errChan <- fmt.Errorf("encounted error while parsing expected output: %v", err.Error())
 			return
 		}
 
-		err = output.Compare(resp)
+		err = o.Compare(expectedOutput, resp)
 		if err != nil {
 			errChan <- fmt.Errorf("encounted error while comparing expected output: %v", err.Error())
 			return
