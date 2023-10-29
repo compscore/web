@@ -151,7 +151,7 @@ func Run(ctx context.Context, target string, command string, expectedOutput stri
 
 	select {
 	case <-ctx.Done():
-		return false, "Timeout exceeded; err %v" + ctx.Err().Error()
+		return false, fmt.Sprintf("Timeout exceeded; err %v", ctx.Err())
 	case err := <-errChan:
 		if err != nil {
 			return false, fmt.Sprintf("Encountered error: %s", err)
